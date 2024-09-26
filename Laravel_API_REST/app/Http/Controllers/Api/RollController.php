@@ -49,7 +49,7 @@ class RollController extends Controller
 
         $roll = Rolls::findOrFail($id);
         $roll->update($validatedData);
-        return response()->json($roll);
+        return response()->json($roll, 200);
     }
 
     // Eliminar un roll
