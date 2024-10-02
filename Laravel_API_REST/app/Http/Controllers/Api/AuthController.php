@@ -1,12 +1,13 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Api;
 
 use Illuminate\Http\Request;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Passport\Client;
 use Laravel\Passport\HasApiTokens;
+use App\Http\Controllers\Controller;
 
 class AuthController extends Controller
 {
@@ -38,14 +39,14 @@ class AuthController extends Controller
             'password' => 'required|string',
         ]);
     
-        // if (Auth::attempt(['email' => $request->email, 'password' => $request->password])) {
-        //     $user = Auth::user();
-        //     //$token = $user->createToken('Personal Access Token')->accessToken;
+        if (Auth::attempt(['email' => $request->email, 'password' => $request->password])) {
+            $user = Auth::user();
+            $token = $user->createToken('Personal Access Token')->accessToken;
     
-        //     return response()->json(['token' => $token], 200);
-        // }
+            return response()->json(['token' => $token], 200);
+        }
     
-        // return response()->json(['error' => 'Unauthorized'], 401);
+        return response()->json(['error' => 'Unauthorized'], 401);
     }
     
 
