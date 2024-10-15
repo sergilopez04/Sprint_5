@@ -1,11 +1,11 @@
 <?php
+
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\RollController;
 use App\Http\Controllers\Api\AuthController;
-use App\Http\Controllers\PlayerController;  
-use App\Http\Controllers\AdminController;
-
+use App\Http\Controllers\Api\PlayerController;  
+use App\Http\Controllers\Api\AdminController;   
 
 /*
 |--------------------------------------------------------------------------
@@ -18,40 +18,31 @@ Route::post('/register', [AuthController::class, 'register']);  // Registro de u
 Route::post('/login', [AuthController::class, 'login']);        // Iniciar sesión
 Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth:api');  // Cerrar sesión
 
-// Rutas para los jugadores (solo usuarios autenticados)
-Route::middleware('auth:api')->group(function () {
+Route::middleware('auth:api')->group( function()
+{
+    // Rutas de jugadores (sin restricción de rol)
+    route::get('/players/ranking/winner', [PlayerController::class, 'showBest'])->name('players.showBest');
+    route::put('/players/{id}', [PlayerController::class, 'update'])->name('players.update');
+    route::post('/players/{id}/games/', [PlayerController::class, 'createDice'])->name('players.createDice');
+    route::delete('/players/{id}/games', [PlayerController::class, 'deleteDice'])->name('players.deleteDice');
+    route::get('/players/{id}/games', [PlayerController::class, 'showDice'])->name('players.showDice');
 
-    // Crear un nuevo jugador/a
-    Route::post('/players', [PlayerController::class, 'store']);
+    // Rutas administrativas (middleware 'role:admin')
+        Route::get('/players/ranking/loser', [AdminController::class, 'showWorst'])
+        ->middleware('role:admin')
+        ->name('players.showWorst');
 
-    // Modificar el nombre de un jugador/a
-    Route::put('/players/{id}', [PlayerController::class, 'update']);
-
-    // Ver todas las tiradas de un jugador/a específico
-    Route::get('/players/{id}/games', [RollController::class, 'index']);
-
-    // Un jugador/a realiza una tirada de dados
-    Route::post('/players/{id}/games', [RollController::class, 'store']);
-
-    // Eliminar todas las tiradas de un jugador/a
-    Route::delete('/players/{id}/games', [RollController::class, 'destroy']);
+        Route::get('/players/ranking/winner', [AdminController::class, 'showBest'])
+        ->middleware('role:admin')
+        ->name('players.showBest');
     
-    // Ver el ranking de todos los jugadores/as
-    Route::get('/players/ranking', [PlayerController::class, 'ranking']);
+    Route::get('/players', [AdminController::class, 'showPlayers'])
+        ->middleware('role:admin')
+        ->name('players.showPlayers');
+    
+    Route::get('/players/ranking', [AdminController::class, 'showRanking'])
+        ->middleware('role:admin')
+        ->name('players.showRanking');
 
-    // Ver el jugador/a con peor porcentaje de éxito
-    Route::get('/players/ranking/loser', [PlayerController::class, 'loser']);
 
-    // Ver el jugador/a con mejor porcentaje de éxito
-    Route::get('/players/ranking/winner', [PlayerController::class, 'winner']);
-});
-
-// Rutas para administración (solo accesibles por el admin)
-Route::middleware(['auth:api', 'role:admin'])->group(function () {
-
-    // Ver todos los jugadores/as y sus porcentajes de éxito
-    Route::get('/admin/players', [AdminController::class, 'index']);
-
-    // Ver el porcentaje de éxito promedio de todos los jugadores/as
-    Route::get('/admin/players/average-success', [AdminController::class, 'averageSuccess']);
 });

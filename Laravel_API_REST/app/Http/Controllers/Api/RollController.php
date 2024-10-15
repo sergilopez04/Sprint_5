@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
@@ -8,25 +7,33 @@ use Illuminate\Http\Request;
 
 class RollController extends Controller
 {
-    // Obtener todos los rolls
-    public function index()
-    {
-        return Rolls::all();
-    }
-
     // Crear un nuevo roll
     public function store(Request $request)
     {
-        $validatedData = $request->validate([
-            'player_id' => 'required|exists:users,id',
-            'die1_value' => 'required|integer',
-            'die2_value' => 'required|integer',
-            'result' => 'required|in:ganado,perdido',
-            'roll_date' => 'required|date',
+        // Obtener el ID del usuario autenticado
+        $playerId = $request->user()->id;
+
+        $die1Value = $this->rollDie();
+        $die2Value = $this->rollDie();
+
+        $sum = $die1Value + $die2Value;
+        $result = ($sum === 7) ? 'ganado' : 'perdido';
+        $rollDate = now();
+
+        $roll = Rolls::create([
+            'player_id' => $playerId,
+            'die1_value' => $die1Value,
+            'die2_value' => $die2Value,
+            'result' => $result,
+            'roll_date' => $rollDate,
         ]);
 
-        $roll = Rolls::create($validatedData);
         return response()->json($roll, 201);
+    }
+
+    private function rollDie()
+    {
+        return rand(1, 6); 
     }
 
     // Obtener un roll específico
@@ -52,11 +59,11 @@ class RollController extends Controller
         return response()->json($roll, 200);
     }
 
-    // Eliminar un roll
-    public function destroy($id)
-    {
-        $roll = Rolls::findOrFail($id);
-        $roll->delete();
-        return response()->json(null, 204);
-    }
+    // // Eliminar un roll
+    // public function destroy($id)
+    // {
+    //     $roll = Rolls::findOrFail($id);
+    //     $roll->delete();
+    //     return response()->json(null, 204);
+    // }
 }
