@@ -32,7 +32,7 @@ class User extends Authenticatable
     ];
 
     protected $attributes = [
-        'name' => 'Anonymous',
+        'nickname' => 'Anonymous',
         'role' => 'player',
     ];
 

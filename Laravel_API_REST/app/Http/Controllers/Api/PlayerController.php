@@ -15,25 +15,25 @@ class PlayerController extends Controller
         return response()->json(['message' => 'El jugador ya está registrado como usuario.'], 201);
     }
 
-    public function updatePlayer(Request $request, string $id) {
-        $userToUpdate = User::findOrFail($id);
-        $authUser = $request->user();
-
-        if ($authUser->id !== $userToUpdate->id) {
+    public function updateUserName(Request $request, string $userId) {
+        $userToUpdate = User::findOrFail($userId);
+        $authenticatedUser = $request->user();
+    
+        if ($authenticatedUser->id !== $userToUpdate->id) {
             return response()->json([
                 "message" => "You cannot modify another user's name."
             ], 403);
         }
-
+    
         $request->validate([
             'name' => 'nullable|string',
         ]);
-
-        $newName = empty($request->name) ? 'Anonymous' : $request->name;
-
-        if($newName !== 'anónimo') {
-            $existingUser = User::where('name', $newName)->first();
-            if ($existingUser && $existingUser->id !== $userToUpdate->id) {
+    
+        $updatedName = empty($request->name) ? 'Anonymous' : $request->name;
+    
+        if ($updatedName !== 'Anonymous') {
+            $conflictingUser = User::where('name', $updatedName)->first();
+            if ($conflictingUser && $conflictingUser->id !== $userToUpdate->id) {
                 return response()->json([
                     'message' => 'The name is already in use. Please choose another one.'
                 ], 400);
@@ -42,14 +42,16 @@ class PlayerController extends Controller
                 'name' => 'unique:users,name',
             ]);
         }
-
-        $userToUpdate->name = $newName;
+    
+        $userToUpdate->name = $updatedName;
         $userToUpdate->save();
-
+    
         return response()->json([
-            'message' => 'New Name is ' . $newName . ', Change Completed'
+            'message' => 'New name is ' . $updatedName . ', change completed.'
         ], 200);
     }
+    
+    
 
 
     
