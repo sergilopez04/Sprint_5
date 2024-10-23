@@ -16,4 +16,9 @@ class Rolls extends Model
         'result',
         'roll_date',
     ];
+    
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
 }

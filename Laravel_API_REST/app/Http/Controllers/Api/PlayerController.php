@@ -9,25 +9,50 @@ use Illuminate\Http\Request;
 
 class PlayerController extends Controller
 {
-    // Crear un nuevo jugador (en este caso, ya es un usuario registrado)
+    const WIN_GAME = 7;
     public function store(Request $request)
     {
-        // Dado que el jugador es el mismo usuario, no es necesario crear uno nuevo
         return response()->json(['message' => 'El jugador ya está registrado como usuario.'], 201);
     }
 
-    public function update(Request $request, $id)
-    {
-        $validatedData = $request->validate([
-            'name' => 'sometimes|string|max:255|unique',
-            'nickname' => 'sometimes|string|max:255|unique:users,nickname,' . $id,
+    public function updatePlayer(Request $request, string $id) {
+        $userToUpdate = User::findOrFail($id);
+        $authUser = $request->user();
+
+        if ($authUser->id !== $userToUpdate->id) {
+            return response()->json([
+                "message" => "You cannot modify another user's name."
+            ], 403);
+        }
+
+        $request->validate([
+            'name' => 'nullable|string',
         ]);
 
-        $player = User::findOrFail($id);
-        $player->update($validatedData);
+        $newName = empty($request->name) ? 'Anonymous' : $request->name;
 
-        return response()->json(['message' => 'El jugador ha sido actualizado con éxito.']);
+        if($newName !== 'anónimo') {
+            $existingUser = User::where('name', $newName)->first();
+            if ($existingUser && $existingUser->id !== $userToUpdate->id) {
+                return response()->json([
+                    'message' => 'The name is already in use. Please choose another one.'
+                ], 400);
+            }
+            $request->validate([
+                'name' => 'unique:users,name',
+            ]);
+        }
+
+        $userToUpdate->name = $newName;
+        $userToUpdate->save();
+
+        return response()->json([
+            'message' => 'New Name is ' . $newName . ', Change Completed'
+        ], 200);
     }
+
+
+    
 
     public function games($id)
     {
@@ -37,30 +62,4 @@ class PlayerController extends Controller
         return response()->json($games);
     }
 
-    public function ranking()
-    {
-        $players = User::withCount(['rolls as success_rate' => function ($query) {
-            $query->select(Rolls::raw('avg(result = "ganado")'));
-        }])->orderByDesc('success_rate')->get();
-
-        return response()->json($players);
-    }
-
-    public function loser()
-    {
-        $loser = User::withCount(['rolls as success_rate' => function ($query) {
-            $query->select(Rolls::raw('avg(result = "ganado")'));
-        }])->orderBy('success_rate')->first();
-
-        return response()->json($loser);
-    }
-
-    public function winner()
-    {
-        $winner = User::withCount(['rolls as success_rate' => function ($query) {
-            $query->select(Rolls::raw('avg(result = "ganado")'));
-        }])->orderByDesc('success_rate')->first();
-
-        return response()->json($winner);
-    }
 }

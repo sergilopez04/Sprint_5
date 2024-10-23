@@ -10,10 +10,10 @@ return new class extends Migration
     {
         Schema::create('rolls', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('player_id');
+            $table->foreignId('player_id')->constrained('users')->onDelete('cascade');            
             $table->integer('die1_value');
             $table->integer('die2_value');
-            $table->enum('result', ['ganado', 'perdido']);
+            $table->enum('result', ['Won', 'Lost']);
             $table->timestamp('roll_date');
             $table->timestamps();
         });

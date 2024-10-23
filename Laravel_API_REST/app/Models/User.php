@@ -35,4 +35,9 @@ class User extends Authenticatable
         'name' => 'Anonymous',
         'role' => 'player',
     ];
+
+    public function games()
+    {
+        return $this->hasMany(Rolls::class, 'player_id');
+    }
 }
