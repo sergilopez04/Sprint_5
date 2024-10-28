@@ -5,19 +5,46 @@ namespace Database\Seeders;
 use App\Models\User;
 // use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Spatie\Permission\Models\Role;
+use Spatie\Permission\Models\Permission;
 
 class DatabaseSeeder extends Seeder
 {
-    /**
-     * Seed the application's database.
-     */
     public function run(): void
     {
-        // User::factory(10)->create();
+        Permission::create((['name' => 'manage players']));
+        Permission::create((['name' => 'play games']));
+        
+        // Role::create(['name' => 'Super Admin']);
+        // $admin = Role::create(['name' => 'admin']);
+        // $player = Role::create(['name' => 'player']);
 
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-        ]);
+        $admin = Role::create(['name' => 'admin']);
+        $admin->givePermissionTo('manage players');
+
+        $player = Role::create(['name' => 'player']);
+        $player->givePermissionTo('play games');
+
+        $user = User::find(1);
+        $user->assignRole('admin');
+        // $admin->givePermissionTo([
+        //     'edit-player',
+        //     'view-game',
+        //     'create-game',
+        //     'view-ranking',
+        //     'view-worst',
+        //     'view-best',
+        //     'delete-games',
+        //     'view-player'
+        // ]);
+
+        // $player->givePermissionTo([
+        //     'edit-player',
+        //     'view-game',
+        //     'create-game',
+        //     'view-ranking',
+        //     'view-worst',
+        //     'view-best'
+        // ]);
     }
-}
+    }
