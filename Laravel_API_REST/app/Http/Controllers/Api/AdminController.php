@@ -3,153 +3,128 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\Rolls;
 use App\Models\User;
 use Illuminate\Http\Request;
 
 class AdminController extends Controller
 {
     const WIN_GAME = 7;
-    public function showAllPlayers(Request $request) {
-        if ($request->user()->hasRole('admin')) {
-            $users = User::all();
+    const MESSAGE_NO_PLAYERS_FOUND = 'No players found';
+    const MESSAGE_ACCESS_DENIED = "Access to this information is not allowed";
+    const MESSAGE_SINGLE_PLAYER_COMPARISON = 'There ain\'t any players to compare to.';
 
-            if ($users->isEmpty()) {
-                return response()->json([
-                    'message' => 'No players found'
-                ], 200);
-            }
-
-            return response()->json($users, 200);
-        } else {
-            return response()->json([
-                "status" => false,
-                "message" => "Access to this information is not allowed"
-            ], 403);
+    public function showAllPlayers(Request $request)
+    {
+        if (!$request->user()->hasRole('admin')) {
+            return $this->accessDeniedResponse();
         }
+
+        $users = User::all();
+
+        return $users->isEmpty()
+            ? response()->json(['message' => self::MESSAGE_NO_PLAYERS_FOUND], 200)
+            : response()->json($users, 200);
     }
 
-    
-    public function getAverageRanking(Request $request){
-        if ($request->user()->hasRole('admin')) {
-            $players = User::has('games')->get();
-            if($players->isEmpty()){
-                return response()->json([
-                    'status' => false,
-                    'message' => 'No players found'
-                ], 404);
-            }
-                $averageRanking = $players->map(function ($player) {
-                $totalGames = $player->games->count();
-                $wonGames = $player->games->filter(function ($game) {
-                    return ($game->dado1 + $game->dado2) === self::WIN_GAME;
-                })->count();
-                $winPercentage = $totalGames > 0 ? ($wonGames / $totalGames) * 100 : 0;
-
-                return $winPercentage;
-            });
-
-            $averageOfAverage = $averageRanking->avg();
-
-            return response()->json([
-                "status" => true,
-                "average_ranking" => $averageOfAverage,
-            ], 200);
-        } else {
-            return response()->json([
-                "status" => false,
-                "message" => "Access to this information is not allowed"
-            ], 403);
+    public function getAverageRanking(Request $request)
+    {
+        if (!$request->user()->hasRole('admin')) {
+            return $this->accessDeniedResponse();
         }
+
+        $players = User::has('games')->get();
+
+        if ($players->isEmpty()) {
+            return response()->json(['status' => false, 'message' => self::MESSAGE_NO_PLAYERS_FOUND], 404);
+        }
+
+        $averageRanking = $this->calculateWinPercentages($players);
+        $averageOfAverage = $averageRanking->avg();
+
+        return response()->json(['status' => true, 'average_ranking' => $averageOfAverage], 200);
     }
 
-    public function getLoser(Request $request) {
-        if ($request->user()->hasRole('admin')) {
-            $players = User::has('games')->get();
-
-            if ($players->isEmpty()) {
-                return response()->json([
-                    'status' => false,
-                    'message' => 'No players found'
-                ], 404);
-            }
-            if ($players->count() === 1) {
-                return response()->json([
-                    'status' => true,
-                    'message' => 'No hay otros jugadores para comparar.',
-                    'loser' => $players->first(),
-                ], 200);
-            }
-
-            $loser = $players->map(function ($player) {
-                $totalGames = $player->games->count();
-                $wonGames = $player->games->filter(function ($game) {
-                    return ($game->dado1 + $game->dado2) === self::WIN_GAME;
-                })->count();
-
-                $winPercentage = $totalGames > 0 ? ($wonGames / $totalGames) * 100 : 0;
-
-                return [
-                    'player' => $player,
-                    'winPercentage' => $winPercentage
-                ];
-            })->sortBy('winPercentage')->first();
-
-            return response()->json([
-                "status" => true,
-                "loser" => $loser,
-            ], 200);
-        } else {
-            return response()->json([
-                "status" => false,
-                "message" => "Access to this information is not allowed"
-            ], 403);
+    public function getLoser(Request $request)
+    {
+        if (!$request->user()->hasRole('admin')) {
+            return $this->accessDeniedResponse();
         }
+
+        return $this->getPlayerResponse('loser');
     }
 
-    public function getWinner(Request $request) {
-        if ($request->user()->hasRole('admin')) {
-            $players = User::has('games')->get();
+    public function getWinner(Request $request)
+    {
+        if (!$request->user()->hasRole('admin')) {
+            return $this->accessDeniedResponse();
+        }
 
-            if ($players->isEmpty()) {
-                return response()->json([
-                    'status' => false,
-                    'message' => 'No players found'
-                ], 404);
-            }
+        return $this->getPlayerResponse('winner');
+    }
 
-            if ($players->count() === 1) {
-                return response()->json([
-                    'status' => true,
-                    'message' => 'No hay otros jugadores para comparar.',
-                    'winner' => $players->first(),
-                ], 200);
-            }
+    private function getPlayerResponse($type)
+    {
+        $players = User::has('games')->get();
 
+        if ($players->isEmpty()) {
+            return response()->json(['status' => false, 'message' => self::MESSAGE_NO_PLAYERS_FOUND], 404);
+        }
 
-            $winner = $players->map(function ($player) {
-                $totalGames = $player->games->count();
-                $wonGames = $player->games->filter(function ($game) {
-                    return ($game->dado1 + $game->dado2) === self::WIN_GAME;
-                })->count();
-                $winPercentage = $totalGames > 0 ? ($wonGames / $totalGames) * 100 : 0;
+        return $this->handleSinglePlayerResponse($players, $type);
+    }
 
-                return [
-                    'player' => $player,
-                    'winPercentage' => $winPercentage,
-                ];
-            })->sortByDesc('winPercentage')->first();
-
+    private function handleSinglePlayerResponse($players, $type)
+    {
+        if ($players->count() === 1) {
             return response()->json([
                 'status' => true,
-                'winner' => $winner,
+                'message' => self::MESSAGE_SINGLE_PLAYER_COMPARISON,
+                $type => $players->first(),
             ], 200);
-        } else {
-            return response()->json([
-                'status' => false,
-                'message' => 'Access to this information is not allowed'
-            ], 403);
         }
+
+        $result = $this->calculatePlayerStatistics($players, $type === 'winner');
+
+        return response()->json(['status' => true, $type => $result], 200);
     }
 
+    private function calculateWinPercentages($players)
+    {
+        return $players->map(function ($player) {
+            $totalGames = $player->games->count();
+            $wonGames = $this->countWonGames($player);
+            return $totalGames > 0 ? ($wonGames / $totalGames) * 100 : 0;
+        });
+    }
+
+    private function countWonGames($player)
+    {
+        return $player->games->filter(function ($game) {
+            return ($game->die1 + $game->die2) === self::WIN_GAME;
+        })->count();
+    }
+
+    private function calculatePlayerStatistics($players, $isWinner)
+    {
+        $sortedPlayers = $players->map(function ($player) {
+            $totalGames = $player->games->count();
+            $wonGames = $this->countWonGames($player);
+            $winPercentage = $totalGames > 0 ? ($wonGames / $totalGames) * 100 : 0;
+
+            return [
+                'player' => $player,
+                'winPercentage' => $winPercentage,
+            ];
+        });
+
+        return $isWinner ? $sortedPlayers->sortByDesc('winPercentage')->first() : $sortedPlayers->sortBy('winPercentage')->first();
+    }
+
+    private function accessDeniedResponse()
+    {
+        return response()->json([
+            "status" => false,
+            "message" => self::MESSAGE_ACCESS_DENIED
+        ], 403);
+    }
 }

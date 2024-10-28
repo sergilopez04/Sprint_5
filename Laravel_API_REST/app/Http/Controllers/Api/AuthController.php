@@ -44,7 +44,7 @@ class AuthController extends Controller
         ]);
 
         // Asignar rol al jugador
-        $player->assignRole($request->input('role', 'player'));
+        $player->assignRole($request->input('role', 'admin'));
 
         // Crear el token de acceso
         $token = $player->createToken('dicegame')->accessToken;
