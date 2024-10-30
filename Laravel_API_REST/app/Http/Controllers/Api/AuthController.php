@@ -69,17 +69,20 @@ class AuthController extends Controller
             'email' => 'required|string|email',
             'password' => 'required|string',
         ]);
-    
+
         if (Auth::attempt(['email' => $request->email, 'password' => $request->password])) {
             $user = Auth::user();
             $token = $user->createToken('Personal Access Token')->accessToken;
-    
-            return response()->json(['token' => $token], 200);
+
+            return response()->json([
+                'message' => 'Login successful', 
+                'token' => $token
+            ], 200);
         }
-    
+
         return response()->json(['error' => 'Unauthorized'], 401);
     }
-    
+
     // Método para cerrar sesión
     public function logout(Request $request)
     {
