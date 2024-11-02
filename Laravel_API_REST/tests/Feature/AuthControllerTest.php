@@ -147,5 +147,58 @@ class AuthControllerTest extends TestCase
     ]);
     }
 
+    #[Test]
+    public function test_user_login_with_wrong_password(){
+        $user = User::factory()->create([
+            'email' => 'wrong@password.com',
+            'password' => bcrypt('123456789'),
+        ]);
+
+        $response = $this->postJson('/api/login', [
+            'email' => $user->email,
+            'password' => 'wrongpassword',
+        ]);
+
+        $response->assertStatus(401);
+        $response->assertJson([
+            'error' => 'Unauthorized',
+        ]);
+    }
+    #[Test]
+    public function test_user_cannot_have_duplicated_nickname(){
+        $user = User::factory()->create([
+            'nickname' => 'Player2',
+            'email' => 'origina@nickname.com',
+            'password' => bcrypt('123456789'),
+        ]);
+
+        $response = $this->postJson('/api/player', [
+            'nickname' => 'Player2',
+            'email' => 'notoriginal@nickname.com',
+            'password' => bcrypt('123456789'),
+        ]);
+
+        $response->assertStatus(422)
+        ->assertJson([
+            "error" => "Validation Error.",
+            "details"=> [
+                "nickname"=> ["The nickname has already been taken."]]        
+            
+        ]);}
+
+        #[Test]
+        public function test_user_without_nickname_equals_to_anonymous(){
+            $user = User::factory()->create([
+                'nickname' => 'hi',
+            ]);
+            $token = $user->createToken('UserToken')->accessToken;
+            $response = $this->withHeaders(['Authorization' => 'Bearer ' . $token])->putJson('/api/players/' . $user->id, [
+            'nickname' => '',
+        ]);
+
+        $response->assertStatus(200);
+        $this->assertEquals('Anonymous', $user->fresh()->name);
+
+        }
 }
 
