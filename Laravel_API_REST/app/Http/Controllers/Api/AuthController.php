@@ -17,12 +17,12 @@ class AuthController extends Controller
         // Validación de los campos
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users', // Cambiado a 'users'
+            'email' => 'required|string|email|max:255|unique:users', 
             'password' => 'required|string|min:8',
             'nickname' => [
                 'nullable',
                 'string',
-                'unique:users,nickname', // Cambiado a 'users'
+                'unique:users,nickname', 
                 'max:25'
             ],
         ]);

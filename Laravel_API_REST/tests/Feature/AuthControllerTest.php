@@ -15,7 +15,7 @@ use Spatie\Permission\Models\Role;
 use Illuminate\Database\Seeder;
 use Spatie\Permission\Models\Permission;
 
-class UserTest extends TestCase
+class AuthControllerTest extends TestCase
 {
     use RefreshDatabase, WithFaker;
 
@@ -80,8 +80,6 @@ class UserTest extends TestCase
         $this->assertTrue(Hash::check('123456789', $user->password));
         $this->assertEquals($user->role, 'player');
         $this->assertEquals($user->nickname, 'Anonymous');
-        // $this->assertNotNull($user->api_token);
-
 
     }
 
@@ -105,4 +103,49 @@ class UserTest extends TestCase
         ]);
         $this->assertNotEmpty($response->json('token'));
     }
+
+    #[Test]
+    public function test_user_can_logout(){
+
+        $user = User::factory()->create([
+            'email' => 'player2@player.com',
+            'password' => bcrypt('123456789'),
+        ]);
+
+        $token = $user->createToken('PlayerToken')->accessToken;
+
+        $response = $this->withHeaders([
+            'Authorization' => 'Bearer ' . $token,
+        ])->postJson('/api/logout');
+
+        $response->assertStatus(200);
+        $response->assertJson([
+            'message' => 'Logged out successfully',
+        ]);
+    }
+
+    #[Test]
+    public function test_user_can_update_name(){
+    $user = User::factory()->create([
+        'email' => 'player2@player.com',
+        'password' => bcrypt('123456789'),
+    ]);
+
+    $token = $user->createToken('PlayerToken')->accessToken;
+
+    $newName = 'User2';
+
+    $response = $this->withHeaders([
+        'Authorization' => 'Bearer ' . $token,
+    ])->putJson('/api/players/' . $user->id, [
+        'name' => $newName,
+    ]);
+
+    $response->assertStatus(200);
+    $response->assertJson([
+        'message' => sprintf('New name is %s, change completed.', $newName),
+    ]);
+    }
+
 }
+
