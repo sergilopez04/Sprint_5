@@ -10,16 +10,19 @@ use Illuminate\Http\Request;
 class RollController extends Controller
 {
     const WINNING_SUM = 7;
+    const MESSAGE_NO_GAMES_RECORDED = 'No games recorded';
+    const MESSAGE_USER_NOT_FOUND = 'User not found';
+    const MESSAGE_NO_GAMES_TO_DELETE = 'No games to delete';
+    const MESSAGE_GAMES_DELETED = '%d games deleted.';
+    const MESSAGE_ACCESS_DENIED = 'You cannot access this user\'s games';
 
     public function showGames(Request $request, string $id)
     {
-        $user = $this->getUserOrFail($id);
-        $this->authorizeUser($request->user(), $user);
-
+        $user = $this->authorizeAndGetUser($request, $id);
         $games = $user->games;
 
         if ($games->isEmpty()) {
-            return response()->json(['message' => 'No games recorded'], 200);
+            return $this->jsonResponse(self::MESSAGE_NO_GAMES_RECORDED, 200);
         }
 
         return response()->json($this->formatGamesResponse($games), 200);
@@ -28,11 +31,7 @@ class RollController extends Controller
     public function playGame(Request $request, string $id)
     {
         $authenticatedUser = $request->user();
-        $targetUser = User::find($id);
-
-        if (is_null($targetUser)) {
-            return response()->json(['message' => 'User not found'], 404);
-        }
+        $targetUser = User::findOrFail($id); 
 
         $this->authorizeUser($authenticatedUser, $targetUser);
 
@@ -53,49 +52,38 @@ class RollController extends Controller
         return response()->json($this->formatPlayGameResponse($result, $die1, $die2), 200);
     }
 
-    private function rollDie(): int
-    {
-        return random_int(1, 6);
-    }
-
     public function deleteGames(Request $request, string $id)
     {
-        $user = $this->getUserOrFail($id);
-        $this->authorizeUser($request->user(), $user);
-
+        $user = $this->authorizeAndGetUser($request, $id);
         $games = $user->games;
 
         if ($games->isEmpty()) {
-            return response()->json(['message' => 'No games to delete'], 200);
+            return $this->jsonResponse(self::MESSAGE_NO_GAMES_TO_DELETE, 200);
         }
 
-        $deletedCount = $games->count(); // Fix: Correct deletion count
-        $games->each->delete(); // Corrected the deletion method
-        return response()->json(['message' => "{$deletedCount} games deleted."], 200);
+        $deletedCount = $games->count();
+        $games->each->delete();
+        return $this->jsonResponse(sprintf(self::MESSAGE_GAMES_DELETED, $deletedCount), 200);
     }
 
-    private function getUserOrFail(string $id): User
+    private function authorizeAndGetUser(Request $request, string $id): User
     {
-        $user = User::find($id);
-        if (is_null($user)) {
-            abort(404, 'User not found');
-        }
+        $user = User::findOrFail($id);
+        $this->authorizeUser($request->user(), $user);
         return $user;
     }
 
     private function authorizeUser(User $authenticatedUser, User $targetUser): void
     {
         if ($authenticatedUser->id !== $targetUser->id) {
-            abort(403, 'You cannot access this user\'s games');
+            abort(403, self::MESSAGE_ACCESS_DENIED);
         }
     }
 
     private function formatGamesResponse($games): array
     {
         $totalGames = $games->count();
-        $wonGames = $games->filter(function ($game) {
-            return ($game->die1_value + $game->die2_value) === self::WINNING_SUM;
-        })->count();
+        $wonGames = $games->where('result', 'Won')->count();
         $winPercentage = $totalGames > 0 ? ($wonGames / $totalGames) * 100 : 0;
 
         $formattedGames = $games->map(function ($game, $index) {
@@ -122,4 +110,15 @@ class RollController extends Controller
             'Total' => $die1 + $die2,
         ];
     }
+
+    private function rollDie(): int
+    {
+        return random_int(1, 6);
+    }
+
+    private function jsonResponse(string $message, int $statusCode): \Illuminate\Http\JsonResponse
+    {
+        return response()->json(['message' => $message], $statusCode);
+    }
 }
+

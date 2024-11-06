@@ -9,15 +9,15 @@ use App\Http\Controllers\Api\AdminController;
 use App\Models\Rolls;
 
 // Rutas para autenticación de usuarios
-Route::post('/register', [AuthController::class, 'register']);  // Registro de usuarios
-Route::post('/login', [AuthController::class, 'login']);        // Iniciar sesión
-Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth:api');  // Cerrar sesión
+Route::post('/player', [AuthController::class, 'register']);
+Route::post('/login', [AuthController::class, 'login']);
+Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth:api');
 
 Route::group(["middleware" => ["auth:api"]], function() {
-    Route::post('/players/{id}/play', [RollController::class, 'playGame']);
-    Route::get('/players/{id}/games', [RollController::class, 'showGames']);
-    Route::delete('/players/{id}/games', [RollController::class, 'deleteGames']);
     Route::put('/players/{id}', [PlayerController::class, 'updateUserName']);
+    Route::post('/players/{id}/games', [RollController::class, 'playGame']);
+    Route::delete('/players/{id}/games', [RollController::class, 'deleteGames']);
+    Route::get('/players/{id}/games', [RollController::class, 'showGames']);
 });
 
 Route::group(["middleware" => ["auth:api", "role:admin"]], function() {

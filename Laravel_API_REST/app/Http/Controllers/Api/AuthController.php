@@ -17,12 +17,12 @@ class AuthController extends Controller
         // Validación de los campos
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users', // Cambiado a 'users'
+            'email' => 'required|string|email|max:255|unique:users', 
             'password' => 'required|string|min:8',
             'nickname' => [
                 'nullable',
                 'string',
-                'unique:users,nickname', // Cambiado a 'users'
+                'unique:users,nickname', 
                 'max:25'
             ],
         ]);
@@ -44,7 +44,7 @@ class AuthController extends Controller
         ]);
 
         // Asignar rol al jugador
-        $player->assignRole($request->input('role', 'player'));
+        $player->assignRole($request->input('role', 'admin'));
 
         // Crear el token de acceso
         $token = $player->createToken('dicegame')->accessToken;
@@ -69,17 +69,20 @@ class AuthController extends Controller
             'email' => 'required|string|email',
             'password' => 'required|string',
         ]);
-    
+
         if (Auth::attempt(['email' => $request->email, 'password' => $request->password])) {
             $user = Auth::user();
             $token = $user->createToken('Personal Access Token')->accessToken;
-    
-            return response()->json(['token' => $token], 200);
+
+            return response()->json([
+                'message' => 'Login successful', 
+                'token' => $token
+            ], 200);
         }
-    
+
         return response()->json(['error' => 'Unauthorized'], 401);
     }
-    
+
     // Método para cerrar sesión
     public function logout(Request $request)
     {
