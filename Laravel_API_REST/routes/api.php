@@ -22,7 +22,7 @@ Route::group(["middleware" => ["auth:api"]], function() {
 
 Route::group(["middleware" => ["auth:api", "role:admin"]], function() {
     Route::get('/players', [AdminController::class, 'showAllPlayers']);
-    Route::get('/players/ranking', [AdminController::class, 'getAverageRanking']);
+    Route::get('/players/ranking', [AdminController::class, 'getPlayerRanking']);
     Route::get('/players/ranking/loser', [AdminController::class, 'getLoser']);
     Route::get('/players/ranking/winner', [AdminController::class, 'getWinner']);
 
