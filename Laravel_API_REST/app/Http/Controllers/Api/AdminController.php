@@ -30,38 +30,41 @@ class AdminController extends Controller
     }
 
     
-    public function getAverageRanking(Request $request){
-        if ($request->user()->hasRole('admin')) {
-            $players = User::has('games')->get();
-            if($players->isEmpty()){
-                return response()->json([
-                    'status' => false,
-                    'message' => 'No players found'
-                ], 404);
-            }
-                $averageRanking = $players->map(function ($player) {
-                $totalGames = $player->games->count();
-                $wonGames = $player->games->filter(function ($game) {
-                    return ($game->dado1 + $game->dado2) === self::WIN_GAME;
-                })->count();
-                $winPercentage = $totalGames > 0 ? ($wonGames / $totalGames) * 100 : 0;
-
-                return $winPercentage;
-            });
-
-            $averageOfAverage = $averageRanking->avg();
-
+    public function getPlayerRanking(Request $request){
+    if ($request->user()->hasRole('admin')) {
+        $players = User::has('games')->get();
+        
+        if ($players->isEmpty()) {
             return response()->json([
-                "status" => true,
-                "average_ranking" => $averageOfAverage,
-            ], 200);
-        } else {
-            return response()->json([
-                "status" => false,
-                "message" => "Access to this information is not allowed"
-            ], 403);
+                'status' => false,
+                'message' => 'No players found'
+            ], 404);
         }
+
+        $ranking = $players->map(function ($player) {
+            $totalGames = $player->games->count();
+            $wonGames = $player->games->filter(function ($game) {
+                return ($game->die1_value + $game->die2_value) === self::WIN_GAME;
+            })->count();
+            $winPercentage = $totalGames > 0 ? ($wonGames / $totalGames) * 100 : 0;
+
+            return [
+                'player' => $player,
+                'winPercentage' => $winPercentage
+            ];
+        })->sortByDesc('winPercentage')->values(); // Ordenar de mayor a menor
+
+        return response()->json([
+            "status" => true,
+            "ranking" => $ranking,
+        ], 200);
+    } else {
+        return response()->json([
+            "status" => false,
+            "message" => "Access to this information is not allowed"
+        ], 403);
     }
+}
 
     public function getLoser(Request $request) {
         if ($request->user()->hasRole('admin')) {
@@ -84,7 +87,7 @@ class AdminController extends Controller
             $loser = $players->map(function ($player) {
                 $totalGames = $player->games->count();
                 $wonGames = $player->games->filter(function ($game) {
-                    return ($game->dado1 + $game->dado2) === self::WIN_GAME;
+                    return ($game->die1_value + $game->die2_value) === self::WIN_GAME;
                 })->count();
 
                 $winPercentage = $totalGames > 0 ? ($wonGames / $totalGames) * 100 : 0;
@@ -130,7 +133,7 @@ class AdminController extends Controller
             $winner = $players->map(function ($player) {
                 $totalGames = $player->games->count();
                 $wonGames = $player->games->filter(function ($game) {
-                    return ($game->dado1 + $game->dado2) === self::WIN_GAME;
+                    return ($game->die1_value + $game->die2_value) === self::WIN_GAME;
                 })->count();
                 $winPercentage = $totalGames > 0 ? ($wonGames / $totalGames) * 100 : 0;
 
